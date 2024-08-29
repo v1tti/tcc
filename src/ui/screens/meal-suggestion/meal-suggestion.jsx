@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 const foods = [
   { name: "Ovo", grams: 100, calories: 155, fat: 11, carbs: 1.1, protein: 13 },
@@ -92,6 +92,8 @@ export function MealSuggestion() {
   const [carbGoal, setCarbGoal] = useState(0);
   const [fatGoal, setFatGoal] = useState(0);
   const [mealPlan, setMealPlan] = useState([]);
+  const [selectedFood, setSelectedFood] = useState(null);
+  const [replacementOptions, setReplacementOptions] = useState([]);
 
   function categorizeFoods() {
     const proteins = foods.filter(
@@ -185,20 +187,73 @@ export function MealSuggestion() {
     setMealPlan(newMealPlan);
   }
 
-  return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Configurações de Meta</h2>
+  function handleSubstitute(food, macronutrientType) {
+    const { proteins, carbs, fats } = categorizeFoods();
 
-      <div className="mb-4 flex items-center">
+    let options = [];
+    if (macronutrientType === "protein") {
+      options = proteins;
+    } else if (macronutrientType === "carb") {
+      options = carbs;
+    } else if (macronutrientType === "fat") {
+      options = fats;
+    }
+
+    setSelectedFood(food);
+    setReplacementOptions(options);
+  }
+
+  function replaceFood(newFood) {
+    const { name, protein, carbs, fat } = selectedFood;
+    const macronutrientType =
+      protein > carbs && protein > fat
+        ? "protein"
+        : carbs > protein && carbs > fat
+        ? "carb"
+        : "fat";
+
+    const gramsToMatch = selectedFood.grams;
+    const newGrams =
+      gramsToMatch *
+      (newFood[macronutrientType] / selectedFood[macronutrientType]);
+
+    const updatedMealPlan = mealPlan.map((meal) =>
+      meal.map((item) =>
+        item.name === name ? { ...newFood, grams: newGrams } : item
+      )
+    );
+
+    setMealPlan(updatedMealPlan);
+    setSelectedFood(null);
+    setReplacementOptions([]);
+  }
+
+  function getMacronutrientType(food) {
+    if (food.protein > food.carbs && food.protein > food.fat) {
+      return "protein";
+    } else if (food.carbs > food.protein && food.carbs > food.fat) {
+      return "carb";
+    } else {
+      return "fat";
+    }
+  }
+
+  return (
+    <div className="p-4 flex flex-col justify-center items-center">
+      <h2 className="text-xl font-bold mb-4 flex justify-center">
+        Configurações de Meta
+      </h2>
+
+      <div className="mb-4 flex items-center justify-center">
         <label className="mr-4">Refeições por dia:</label>
-        <div className="flex items-center">
+        <div className="flex items-center ">
           <button
             className="px-2 py-1 bg-blue-500 text-white rounded-3xl focus:outline-none"
             onClick={() => setMeals((prev) => Math.max(1, prev - 1))}
           >
             -
           </button>
-          <span className="px-4 py-1  text-center">{meals}</span>
+          <span className="px-4 py-1 text-center">{meals}</span>
           <button
             className="px-2 py-1 bg-blue-500 text-white rounded-3xl focus:outline-none"
             onClick={() => setMeals((prev) => prev + 1)}
@@ -208,90 +263,128 @@ export function MealSuggestion() {
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 max-w-60 ">
         <label className="block mb-2">Meta de Proteína (g):</label>
         <input
           type="number"
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={proteinGoal}
-          onChange={(e) => setProteinGoal(Number(e.target.value))}
+          onChange={(e) => setProteinGoal(parseFloat(e.target.value))}
         />
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 max-w-60">
         <label className="block mb-2">Meta de Carboidrato (g):</label>
         <input
           type="number"
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={carbGoal}
-          onChange={(e) => setCarbGoal(Number(e.target.value))}
+          onChange={(e) => setCarbGoal(parseFloat(e.target.value))}
         />
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 max-w-60">
         <label className="block mb-2">Meta de Gordura (g):</label>
         <input
           type="number"
           className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={fatGoal}
-          onChange={(e) => setFatGoal(Number(e.target.value))}
+          onChange={(e) => setFatGoal(parseFloat(e.target.value))}
         />
       </div>
 
       <button
-        className="w-full max-w-60 p-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none"
+        className="px-4 py-2 bg-green-500 text-white rounded focus:outline-none focus:ring-2 focus:ring-green-500"
         onClick={generateMealPlan}
       >
         Gerar Plano de Refeições
       </button>
+
       {mealPlan.length > 0 && (
-        <div className="flex">
-          <div>
-            <h3>Total Diário</h3>
-            {(() => {
-              const totals = mealPlan.reduce(
-                (acc, meal) => {
-                  meal.forEach((food) => {
-                    acc.protein += food.protein;
-                    acc.carbs += food.carbs;
-                    acc.fat += food.fat;
-                    acc.calories += food.calories;
-                  });
-                  return acc;
-                },
-                { protein: 0, carbs: 0, fat: 0, calories: 0 }
-              );
-
-              return (
-                <div>
-                  <p>Proteína Total: {totals.protein.toFixed(2)}g</p>
-                  <p>Carboidratos Totais: {totals.carbs.toFixed(2)}g</p>
-                  <p>Gordura Total: {totals.fat.toFixed(2)}g</p>
-                  <p>Calorias Totais: {totals.calories.toFixed(2)}kcal</p>
+        <div className="mt-6 flex">
+          <div className="mt-4">
+            <h3 className="text-xl font-semibold">Totais Diários</h3>
+            <p className="text-lg">
+              Proteína:{" "}
+              {mealPlan
+                .flat()
+                .reduce((sum, food) => sum + food.protein, 0)
+                .toFixed(2)}
+              g
+            </p>
+            <p className="text-lg">
+              Carboidratos:{" "}
+              {mealPlan
+                .flat()
+                .reduce((sum, food) => sum + food.carbs, 0)
+                .toFixed(2)}
+              g
+            </p>
+            <p className="text-lg">
+              Gordura:{" "}
+              {mealPlan
+                .flat()
+                .reduce((sum, food) => sum + food.fat, 0)
+                .toFixed(2)}
+              g
+            </p>
+            <p className="text-lg">
+              Calorias:{" "}
+              {mealPlan
+                .flat()
+                .reduce((sum, food) => sum + food.calories, 0)
+                .toFixed(2)}
+              kcal
+            </p>
+          </div>
+          <h3 className="text-2xl font-bold">Plano de Refeições</h3>
+          {mealPlan.map((meal, mealIndex) => (
+            <div key={mealIndex} className="mt-4">
+              <h4 className="text-xl font-semibold">
+                Refeição {mealIndex + 1}
+              </h4>
+              {meal.map((food, foodIndex) => (
+                <div key={foodIndex} className="mb-2">
+                  <p className="text-lg text-lime-500">
+                    {food.name}: {food.grams.toFixed(2)}g
+                  </p>
+                  <p>Proteína: {food.protein.toFixed(2)}g</p>
+                  <p>Carboidratos: {food.carbs.toFixed(2)}g</p>
+                  <p>Gordura: {food.fat.toFixed(2)}g</p>
+                  <p>Calorias: {food.calories.toFixed(2)}kcal</p>
+                  <button
+                    className="px-2 py-1 bg-yellow-500 text-white rounded mt-2"
+                    onClick={() =>
+                      handleSubstitute(food, getMacronutrientType(food))
+                    }
+                  >
+                    Substituir
+                  </button>
                 </div>
-              );
-            })()}
-          </div>
+              ))}
+            </div>
+          ))}
 
-          <div className="flex">
-            <h2>Plano de Refeições</h2>
-            {mealPlan.map((meal, mealIndex) => (
-              <div key={mealIndex}>
-                <h3>Refeição {mealIndex + 1}</h3>
-                {meal.map((food, foodIndex) => (
-                  <div key={foodIndex}>
-                    <p className="text-lg text-lime-500">
-                      {food.name}: {food.grams.toFixed(2)}g
-                    </p>
-                    <p>Proteína: {food.protein.toFixed(2)}g</p>
-                    <p>Carboidratos: {food.carbs.toFixed(2)}g</p>
-                    <p>Gordura: {food.fat.toFixed(2)}g</p>
-                    <p>Calorias: {food.calories.toFixed(2)}kcal</p>
-                  </div>
+          {selectedFood && replacementOptions.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-xl font-semibold">
+                Substituir {selectedFood.name}
+              </h3>
+              <ul>
+                {replacementOptions.map((food, index) => (
+                  <li key={index} className="mb-2 flex items-center">
+                    {food.name}
+                    <button
+                      className="px-2 py-1 bg-green-500 text-white rounded ml-2"
+                      onClick={() => replaceFood(food)}
+                    >
+                      Substituir por este
+                    </button>
+                  </li>
                 ))}
-              </div>
-            ))}
-          </div>
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
