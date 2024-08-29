@@ -1,0 +1,1 @@
+export { MealSuggestion } from './meal-suggestion/meal-suggestion.jsx'
