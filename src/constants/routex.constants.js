@@ -1,3 +1,3 @@
 export const ROUTES = {
-  MEAL_SUGGESTION: "/",
+  MEAL_SUGGESTION: "/mealsuggestion",
 };
